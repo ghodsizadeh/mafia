@@ -17,9 +17,7 @@ comments_ordered = []
 
 @auth.verify_password
 def verify_password(username, password):
-    if len(username) > 0:
-        return username
-    return None
+    return username if len(username) > 0 else None
 
 @app.route('/')
 @auth.login_required
@@ -32,21 +30,20 @@ def index():
 
     if ip in ip2role_index_name.keys():
         return render_template("Player.html", player=ip2role_index_name[ip])
-    else:
-        if id > nPlayers:
-            return render_template("404.html", is_farsi=True)
-        role = roles[id]
-        ip2role_index_name[ip] = [role,
-                                  str(randrange(1, nRoles[role] + 1)),
-                                  username,
-                                  "alive",
-                                  False]
-        image_name = role + "_" + str(ip2role_index_name[ip][1])
-        print("*" * 20, "New Player","*" * 20)
-        toGod = ip + " : " + str(id) + " : " + username +  " --> " + role
-        toGod += "/" + role2fa[role]    #TODO: Just in Farsi Mode
-        print(toGod)
-        id += 1
+    if id > nPlayers:
+        return render_template("404.html", is_farsi=True)
+    role = roles[id]
+    ip2role_index_name[ip] = [role,
+                              str(randrange(1, nRoles[role] + 1)),
+                              username,
+                              "alive",
+                              False]
+    image_name = f'{role}_{str(ip2role_index_name[ip][1])}'
+    print("*" * 20, "New Player","*" * 20)
+    toGod = f'{ip} : {str(id)} : {username} --> {role}'
+    toGod += f"/{role2fa[role]}"
+    print(toGod)
+    id += 1
     return render_template("index.html",
                             image_name=image_name,
                             role_name=role, role_name_fa=role2fa[role],
@@ -67,38 +64,35 @@ def GOD_PAGE():
     msg = ""
     if request.args.get("Kill") is not None:
         ip = request.args.get("Kill")
-        if ip in ip2role_index_name.keys():
-            if ip2role_index_name[ip][3] == "alive":
-                ip2role_index_name[ip][3] = "dead"
-            else:
-                ip2role_index_name[ip][3] = "alive"
-        else:
+        if ip not in ip2role_index_name.keys():
             return render_template("404.html", is_farsi=True)
+        if ip2role_index_name[ip][3] == "alive":
+            ip2role_index_name[ip][3] = "dead"
+        else:
+            ip2role_index_name[ip][3] = "alive"
     if request.args.get("Ban") is not None:
         ip = request.args.get("Ban")
-        if ip in ip2role_index_name.keys():
-            if ip2role_index_name[ip][3] == "alive":
-                ip2role_index_name[ip][3] = "banned"
-            elif ip2role_index_name[ip][3] == "banned":
-                ip2role_index_name[ip][3] = "alive"
-        else:
+        if ip not in ip2role_index_name.keys():
             return render_template("404.html", is_farsi=True)
+        if ip2role_index_name[ip][3] == "alive":
+            ip2role_index_name[ip][3] = "banned"
+        elif ip2role_index_name[ip][3] == "banned":
+            ip2role_index_name[ip][3] = "alive"
     if request.args.get("Comment") is not None:
         ip = request.args.get("Comment")
-        if ip in ip2role_index_name.keys():
-            if ip2role_index_name[ip][4] == False:
-                if nComments <= nPlayers // 3:
-                    ip2role_index_name[ip][4] = True
-                    nComments += 1
-                    comments_ordered.append(ip)
-                else:
-                    msg = "Error: Out of Comments."
-            else:
-                ip2role_index_name[ip][4] = False
-                nComments -= 1
-                comments_ordered.remove(ip)
-        else:
+        if ip not in ip2role_index_name.keys():
             return render_template("404.html", is_farsi=True)
+        if ip2role_index_name[ip][4] == False:
+            if nComments <= nPlayers // 3:
+                ip2role_index_name[ip][4] = True
+                nComments += 1
+                comments_ordered.append(ip)
+            else:
+                msg = "Error: Out of Comments."
+        else:
+            ip2role_index_name[ip][4] = False
+            nComments -= 1
+            comments_ordered.remove(ip)
     return render_template("GOD.html", ip2role_index_name=ip2role_index_name,
                            prompt_message=msg, roles={role:roles.count(role) for role in set(roles)},
                            comments=comments_ordered, role2team=role2team)
@@ -155,7 +149,7 @@ if __name__ == "__main__":
     roles = give_me_roles(ordered_roles[:nPlayers])
     shuffle(roles)
     chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ123456789!@#$%^&*()"
-    for i in range(4):
+    for _ in range(4):
         preshared_key += chars[randrange(0, len(chars))]
     print("_" * 20 + "GOD's password" + "_" * 20)
     print(preshared_key)
